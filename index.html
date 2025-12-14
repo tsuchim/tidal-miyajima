@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>宮島（厳島）潮位・簡易計算</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    input { padding: 6px 8px; }
+    button { padding: 6px 10px; }
+    pre { background: #f6f6f6; padding: 10px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>宮島（厳島）潮位・簡易計算</h1>
+
+  <div class="row">
+    <label>日時（ローカル）:</label>
+    <input id="dt" type="datetime-local" />
+    <button id="calc">計算</button>
+  </div>
+
+  <p id="result">—</p>
+  <pre id="day">—</pre>
+
+  <script type="module">
+    import { MiyajimaTide } from "./tide-lib.js";
+
+    const tide = new MiyajimaTide();
+
+    // 初期値：いま
+    const dt = document.getElementById("dt");
+    const now = new Date();
+    dt.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString().slice(0,16);
+
+    function parseLocalDatetimeLocal(v) {
+      // datetime-local はローカル扱いなので、そのまま new Date(yyyy-mm-ddThh:mm) でOK
+      return new Date(v);
+    }
+
+    function renderDayText(baseDateLocal) {
+      // 当日0:00ローカルから24h、10分刻み
+      const day0 = new Date(baseDateLocal.getFullYear(), baseDateLocal.getMonth(), baseDateLocal.getDate(), 0, 0, 0, 0);
+      const series = tide.seriesCm(day0, 24 * 60, 10);
+
+      // ざっくり見やすいように整形
+      return series.map(p => {
+        const d = p.t;
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        return `${hh}:${mm}  ${p.cm.toFixed(1)} cm`;
+      }).join("\n");
+    }
+
+    document.getElementById("calc").addEventListener("click", () => {
+      const d = parseLocalDatetimeLocal(dt.value);
+      const cm = tide.heightCmAt(d);
+      document.getElementById("result").textContent =
+        `${d.toLocaleString()} の推算潮位: ${cm.toFixed(1)} cm（Z0基準）`;
+
+      document.getElementById("day").textContent = renderDayText(d);
+    });
+  </script>
+</body>
+</html>
