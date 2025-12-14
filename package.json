@@ -1,0 +1,35 @@
+{
+  "name": "tidal-miyajima",
+  "version": "1.0.0",
+  "description": "JavaScript library for calculating tidal height at Miyajima (Itsukushima) using harmonic analysis based on textbook equations",
+  "type": "module",
+  "main": "tide-lib.js",
+  "exports": {
+    ".": {
+      "import": "./tide-lib.js"
+    }
+  },
+  "scripts": {
+    "serve": "python -m http.server 8000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tsuchim/tidal-miyajima.git"
+  },
+  "keywords": [
+    "tide",
+    "tidal",
+    "miyajima",
+    "itsukushima",
+    "harmonic-analysis",
+    "ocean",
+    "javascript",
+    "es-module"
+  ],
+  "author": "tsuchim",
+  "license": "MIT",
+  "homepage": "https://github.com/tsuchim/tidal-miyajima",
+  "bugs": {
+    "url": "https://github.com/tsuchim/tidal-miyajima/issues"
+  }
+}
