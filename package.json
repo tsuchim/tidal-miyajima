@@ -10,7 +10,7 @@
     }
   },
   "scripts": {
-    "serve": "python -m http.server 8000"
+    "serve": "node ./scripts/serve.mjs --port 8200 --host 0.0.0.0"
   },
   "repository": {
     "type": "git",

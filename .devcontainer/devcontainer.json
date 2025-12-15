@@ -27,10 +27,14 @@
     }
   },
   "postCreateCommand": "npm install",
-  "forwardPorts": [5173],
+  "forwardPorts": [5173, 8200],
   "portsAttributes": {
     "5173": {
       "label": "Vite Dev Server",
+      "onAutoForward": "notify"
+    },
+    "8200": {
+      "label": "Miyajima Tide Demo (Python http.server)",
       "onAutoForward": "notify"
     }
   }
