@@ -127,9 +127,14 @@ export class MiyajimaTide {
     this.params = params;
   }
 
-  // date: JavaScript Date（ローカルでもUTCでも可。内部ではUTCに変換して計算）
-  heightCmAt(date) {
-    const dateUTC = new Date(date.getTime());
+  // dateUtc: JavaScript Date (MUST represent a UTC instant)
+  // このライブラリの公開APIはすべてUTC入力を前提とする。
+  heightCmAtUTC(dateUtc) {
+    if (!(dateUtc instanceof Date) || Number.isNaN(dateUtc.getTime())) {
+      throw new TypeError("dateUtc must be a valid Date");
+    }
+
+    const dateUTC = new Date(dateUtc.getTime());
 
     // その日の 0:00UT の天文引数を算出し、時刻分だけ進める
     const mid = utcMidnight(dateUTC);
@@ -156,13 +161,17 @@ export class MiyajimaTide {
   }
 
   // 例：分単位で系列を作る（簡易グラフ用）
-  seriesCm(startDate, minutes, stepMinutes = 10) {
+  // startDateUtc: JavaScript Date (UTC)
+  seriesCmAtUTC(startDateUtc, minutes, stepMinutes = 10) {
+    if (!(startDateUtc instanceof Date) || Number.isNaN(startDateUtc.getTime())) {
+      throw new TypeError("startDateUtc must be a valid Date");
+    }
     const out = [];
-    const start = new Date(startDate.getTime());
+    const start = new Date(startDateUtc.getTime());
     const n = Math.floor(minutes / stepMinutes);
     for (let i = 0; i <= n; i++) {
       const d = new Date(start.getTime() + i * stepMinutes * 60000);
-      out.push({ t: d, cm: this.heightCmAt(d) });
+      out.push({ tUTC: d, cm: this.heightCmAtUTC(d) });
     }
     return out;
   }
