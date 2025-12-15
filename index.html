@@ -16,7 +16,7 @@
   <h1>宮島（厳島）潮位・簡易計算</h1>
 
   <div class="row">
-    <label>日時（ローカル）:</label>
+    <label>日時（JST）:</label>
     <input id="dt" type="datetime-local" />
     <button id="calc">計算</button>
   </div>
@@ -29,38 +29,76 @@
 
     const tide = new MiyajimaTide();
 
+    // デモは「入力=JST」とみなし、UTCへ明示的に変換してからライブラリ(UTC API)を呼ぶ。
+    const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
     // 初期値：いま
     const dt = document.getElementById("dt");
-    const now = new Date();
-    dt.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString().slice(0,16);
+    const nowUtc = new Date();
+    dt.value = formatDatetimeLocalJSTFromUTC(nowUtc);
 
-    function parseLocalDatetimeLocal(v) {
-      // datetime-local はローカル扱いなので、そのまま new Date(yyyy-mm-ddThh:mm) でOK
-      return new Date(v);
+    function formatDatetimeLocalJSTFromUTC(dateUtc) {
+      // Date(UTC instant) -> "YYYY-MM-DDTHH:mm" (JST)
+      const jst = new Date(dateUtc.getTime() + JST_OFFSET_MS);
+      const yyyy = jst.getUTCFullYear();
+      const mm = String(jst.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(jst.getUTCDate()).padStart(2, "0");
+      const hh = String(jst.getUTCHours()).padStart(2, "0");
+      const mi = String(jst.getUTCMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
     }
 
-    function renderDayText(baseDateLocal) {
-      // 当日0:00ローカルから24h、10分刻み
-      const day0 = new Date(baseDateLocal.getFullYear(), baseDateLocal.getMonth(), baseDateLocal.getDate(), 0, 0, 0, 0);
-      const series = tide.seriesCm(day0, 24 * 60, 10);
+    function parseDatetimeLocalAsJSTToUTC(v) {
+      // datetime-local はタイムゾーン情報を持たない。
+      // このデモでは「入力値はJST」と決め打ちし、JSTの壁時計時刻 -> UTC instant に変換する。
+      const [datePart, timePart] = String(v).split("T");
+      const [y, m, d] = datePart.split("-").map(Number);
+      const [hh, mi] = timePart.split(":").map(Number);
+      return new Date(Date.UTC(y, m - 1, d, hh - 9, mi, 0, 0));
+    }
+
+    function jstMidnightUtcFromDatetimeLocalValue(v) {
+      const [datePart] = String(v).split("T");
+      const [y, m, d] = datePart.split("-").map(Number);
+      // JST 00:00 は UTC 15:00(前日)
+      return new Date(Date.UTC(y, m - 1, d, -9, 0, 0, 0));
+    }
+
+    function formatJstDateTime(dateUtc) {
+      const jst = new Date(dateUtc.getTime() + JST_OFFSET_MS);
+      const yyyy = jst.getUTCFullYear();
+      const mm = String(jst.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(jst.getUTCDate()).padStart(2, "0");
+      const hh = String(jst.getUTCHours()).padStart(2, "0");
+      const mi = String(jst.getUTCMinutes()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi} JST`;
+    }
+
+    function formatJstTimeHHMM(dateUtc) {
+      const jst = new Date(dateUtc.getTime() + JST_OFFSET_MS);
+      const hh = String(jst.getUTCHours()).padStart(2, "0");
+      const mm = String(jst.getUTCMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    function renderDayText(baseDateTimeJstValue) {
+      // 当日0:00(JST)から24h、10分刻み
+      const day0Utc = jstMidnightUtcFromDatetimeLocalValue(baseDateTimeJstValue);
+      const series = tide.seriesCmAtUTC(day0Utc, 24 * 60, 10);
 
       // ざっくり見やすいように整形
       return series.map(p => {
-        const d = p.t;
-        const hh = String(d.getHours()).padStart(2, "0");
-        const mm = String(d.getMinutes()).padStart(2, "0");
-        return `${hh}:${mm}  ${p.cm.toFixed(1)} cm`;
+        return `${formatJstTimeHHMM(p.tUTC)}  ${p.cm.toFixed(1)} cm`;
       }).join("\n");
     }
 
     document.getElementById("calc").addEventListener("click", () => {
-      const d = parseLocalDatetimeLocal(dt.value);
-      const cm = tide.heightCmAt(d);
+      const dUtc = parseDatetimeLocalAsJSTToUTC(dt.value);
+      const cm = tide.heightCmAtUTC(dUtc);
       document.getElementById("result").textContent =
-        `${d.toLocaleString()} の推算潮位: ${cm.toFixed(1)} cm（Z0基準）`;
+        `${formatJstDateTime(dUtc)} の推算潮位: ${cm.toFixed(1)} cm（Z0基準）`;
 
-      document.getElementById("day").textContent = renderDayText(d);
+      document.getElementById("day").textContent = renderDayText(dt.value);
     });
   </script>
 </body>
