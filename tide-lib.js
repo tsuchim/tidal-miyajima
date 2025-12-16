@@ -41,7 +41,9 @@ function utcMidnightMs(dateUTC) {
 function dayOfYearUTC(dateUTC) {
   const startMs = Date.UTC(dateUTC.getUTCFullYear(), 0, 1, 0, 0, 0, 0);
   const midMs = utcMidnightMs(dateUTC);
-  return Math.floor((midMs - startMs) / DAY_MS) + 1; // 1-based
+  // 0-based: Jan 1st => 0
+  // (The textbook-style approximations used below assume D=0 at Jan 1 0:00 UT.)
+  return Math.floor((midMs - startMs) / DAY_MS);
 }
 
 // 教科書の L=[(Y+3)/4]-500（2000年基準の補助項）
@@ -70,7 +72,8 @@ function astroArgsAtUTMidnight(dateUTC) {
 // 0:00UT からの経過時間 tHours を与えて、T,s,h,p を進める。
 // 教科書: T/hour=15, s/hour=0.54901652, h/hour=0.04106864, p/hour=0.00464181
 function advanceArgs({ s, h, p, N }, tHours) {
-  const T = mod360(15.0 * tHours);
+  // Textbook/Schureman convention: T(0:00UT) = 180° so that T=0° at 12:00UT.
+  const T = mod360(180.0 + 15.0 * tHours);
   return {
     T,
     s: mod360(s + 0.54901652 * tHours),
@@ -130,10 +133,13 @@ export const ITSUKUSHIMA_PARAMS =
     name: "Itsukushima (Miyajima)",
     Z0_cm: 200.0,
     constituents: [
-      { id: "O1", H_cm: 24.0, kappa_deg: 201.0, a: [1, -2, 1, 0] },
+      // Doodson-style equilibrium arguments with (T, s, h, p) multipliers.
+      // O1: T + s
+      { id: "O1", H_cm: 24.0, kappa_deg: 201.0, a: [1, 1, 0, 0] },
       { id: "P1", H_cm: 10.3, kappa_deg: 219.0, a: [1, 0, -1, 0] },
       { id: "K1", H_cm: 31.0, kappa_deg: 219.0, a: [1, 0, 1, 0] },
-      { id: "M2", H_cm: 103.0, kappa_deg: 277.0, a: [2, -2, 2, 0] },
+      // M2: 2T - 2s
+      { id: "M2", H_cm: 103.0, kappa_deg: 277.0, a: [2, -2, 0, 0] },
       { id: "S2", H_cm: 40.0, kappa_deg: 310.0, a: [2, 0, 0, 0] },
       { id: "K2", H_cm: 10.9, kappa_deg: 310.0, a: [2, 0, 2, 0] },
     ],
