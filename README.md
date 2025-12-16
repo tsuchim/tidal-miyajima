@@ -4,6 +4,9 @@ A lightweight JavaScript library for calculating tidal levels around the Great T
 
 This library runs entirely in the browser and does not require any server-side processing, making it suitable for integration into a wide range of applications such as websites, exhibitions, tourism tools, and educational projects.
 
+## Demo Application
+[https://tsuchim.github.io/miyajima-tide/](https://tsuchim.github.io/miyajima-tide/)
+
 ---
 
 ## Purpose
@@ -58,6 +61,13 @@ https://<username>.github.io/<repository>/
 - **Library (tide-lib) API is UTC-only.** All public methods accept `Date` values that represent a **UTC instant** and the core logic is computed strictly in UTC.
 - **No implicit local time / JST conversion is performed inside the library.**
 - **GitHub Pages demo uses JST for convenience.** The demo UI treats user input as **JST** and performs an explicit **JST → UTC** conversion before calling the library.
+
+## Phase Convention
+
+Some published harmonic-constant tables define the phase lag `κ` using a **sine-series convention** rather than the cosine-series convention.
+This library supports both via `params.phaseConvention` (`"sin"` or `"cos"`). `ITSUKUSHIMA_PARAMS` (demo default) uses `"cos"`.
+
+For provenance, the raw values transcribed from the Hydrographic Dept. (JCG) sheet are exposed as `ITSUKUSHIMA_PARAMS_JCG_RAW`.
 
 If you need to convert a JST wall-clock date/time to UTC in your own app, do it explicitly (same approach as the demo):
 
@@ -189,12 +199,15 @@ series.forEach(p => {
 
 | 分潮 | H (cm) | κ (°) | 説明 |
 |------|--------|-------|------|
-| O1   | 24.0   | 201.0 | 主太陰日周潮 |
-| P1   | 10.3   | 219.0 | 主太陽日周潮 |
-| K1   | 31.0   | 219.0 | 日月合成日周潮 |
-| M2   | 103.0  | 277.0 | 主太陰半日周潮 |
-| S2   | 40.0   | 310.0 | 主太陽半日周潮 |
-| K2   | 10.9   | 310.0 | 日月合成半日潮 |
+| O1   | 24.0   | 160.3 | 主太陰日周潮 |
+| P1   | 10.3   | 177.3 | 主太陽日周潮 |
+| K1   | 31.0   | 354.0 | 日月合成日周潮 |
+| M2   | 103.0  | 11.4  | 主太陰半日周潮 |
+| S2   | 40.0   | 45.3  | 主太陽半日周潮 |
+| K2   | 10.9   | 39.2  | 日月合成半日潮 |
+
+※上記はデモの既定値（`ITSUKUSHIMA_PARAMS`）で、`cos(V+u-κ)` の **cosine convention** です。  
+海保シートの値そのもの（`ITSUKUSHIMA_PARAMS_JCG_RAW`）は `sin` 規約のまま保持しています。
 
 ---
 
