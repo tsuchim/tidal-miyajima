@@ -30,7 +30,7 @@ function utcMidnightMs(dateUTC) {
 
 function dayOfYearUTC(dateUTC) {
   const startMs = Date.UTC(dateUTC.getUTCFullYear(), 0, 1);
-  return Math.floor((utcMidnightMs(dateUTC) - startMs) / DAY_MS);
+  return Math.floor((utcMidnightMs(dateUTC) - startMs) / DAY_MS) + 1;
 }
 
 // 教科書の補助項 L = floor((Y+3)/4) - 500
@@ -114,10 +114,10 @@ export const ITSUKUSHIMA_PARAMS = Object.freeze({
   Z0_cm: 200.0,
   constituents: Object.freeze([
     // a = [a1, a2, a3, a4, a5]
-    { id: "O1", H_cm: 24.0, kappa_deg: 201.0, a: [1, 1, 0, 0, 0] },
+    { id: "O1", H_cm: 24.0, kappa_deg: 201.0, a: [1, -2, 1, 0, 0] },
     { id: "P1", H_cm: 10.3, kappa_deg: 219.0, a: [1, 0, -1, 0, 0] },
     { id: "K1", H_cm: 31.0, kappa_deg: 219.0, a: [1, 0, 1, 0, 0] },
-    { id: "M2", H_cm: 103.0, kappa_deg: 277.0, a: [2, -2, 0, 0, 0] },
+    { id: "M2", H_cm: 103.0, kappa_deg: 277.0, a: [2, -2, 2, 0, 0] },
     { id: "S2", H_cm: 40.0, kappa_deg: 310.0, a: [2, 0, 0, 0, 0] },
     { id: "K2", H_cm: 10.9, kappa_deg: 310.0, a: [2, 0, 2, 0, 0] },
   ]),
