@@ -156,9 +156,7 @@
   </main>
 
   <script type="module">
-    import { MiyajimaTide } from "./tide-lib.js";
-
-    const tide = new MiyajimaTide();
+    import { ITSUKUSHIMA_PARAMS, seriesCmAtUTC } from "./tide-lib.js";
 
     // デモは「入力=JST」とみなし、UTCへ明示的に変換してからライブラリ(UTC API)を呼ぶ。
     const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -204,7 +202,7 @@
     function computeSeriesForJstDay(dateStr) {
       // 00:00〜23:50 (10分刻み) = 144点
       const startUtc = parseDateAsJstMidnightToUTC(dateStr);
-      return tide.seriesCmAtUTC(startUtc, 24 * 60 - 10, 10);
+      return seriesCmAtUTC(startUtc, 24 * 60 - 10, 10, ITSUKUSHIMA_PARAMS);
     }
 
     function findExtrema(series) {
@@ -386,7 +384,7 @@
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-      ctx.fillText(`推算潮位（10分刻み）: ${formatJstDateLabel(dateStr)}`, padL, 10);
+      ctx.fillText(`推算潮位（10分刻み）: ${formatJstDateLabel(dateStr)} / ${ITSUKUSHIMA_PARAMS.name}`, padL, 10);
     }
 
     function update() {
