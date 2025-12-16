@@ -195,6 +195,8 @@ series.forEach(p => {
 - **時間変化**: T, s, h, p の時間進行式
 - **節補正係数**: f, u の計算（第2表より）
 
+※実装上の `τ` は、Doodson/Schureman の **平均太陰時 (mean lunar time)** として扱っています（`τ = T + h − s`）。
+
 **調和定数（厳島・Itsukushima）**
 
 | 分潮 | H (cm) | κ (°) | 説明 |
