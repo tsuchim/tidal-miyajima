@@ -83,14 +83,13 @@ function parseDateAsJstMidnightToUTC(dateStr) {
 ## Usage (Overview)
 
 ```js
-import { MiyajimaTide, heightCmAtUTC } from "./tide-lib.js";
+import { heightCmAtUTC, seriesCmAtUTC } from "./tide-lib.js";
 
-const tide = new MiyajimaTide();
-const heightCm = tide.heightCmAtUTC(new Date());
-const height2 = heightCmAtUTC(new Date());
+const height = heightCmAtUTC(new Date());
+const series = seriesCmAtUTC(new Date(), 24 * 60, 10);
 
-console.log(heightCm);
-console.log(height2);
+console.log(height);
+console.log(series);
 ````
 
 See `index.html` for a complete example.
@@ -125,10 +124,9 @@ Contributions and reuse are welcome.
 
 ```html
 <script type="module">
-  import { MiyajimaTide } from "https://raw.githubusercontent.com/tsuchim/miyajima-tide/main/tide-lib.js";
+  import { heightCmAtUTC } from "https://raw.githubusercontent.com/tsuchim/miyajima-tide/devel/tide-lib.js";
   
-  const tide = new MiyajimaTide();
-    const height = tide.heightCmAtUTC(new Date());
+  const height = heightCmAtUTC(new Date());
   console.log(`潮位: ${height.toFixed(1)} cm`);
 </script>
 ```
@@ -151,34 +149,40 @@ npm run serve
 
 ## API リファレンス
 
-### `MiyajimaTide` クラス
+### `heightCmAtUTC(dateUtc: Date, params?: object): number`
 
-#### コンストラクタ
+指定の日時（UTC）における潮位を計算します。
 
-```js
-const tide = new MiyajimaTide(params);
-```
+**パラメータ**
+- `dateUtc`: UTC instant を表す `Date` オブジェクト
+- `params` (optional): 調和定数パラメータ（デフォルト: `ITSUKUSHIMA_PARAMS`）
 
-- `params` (optional): 調和定数パラメータオブジェクト（デフォルト: 厳島の定数）
-
-#### メソッド
-
-##### `heightCmAtUTC(dateUtc: Date): number`
-
-指定の日時(UTC)における潮位を計算します。
+**戻り値**: 潮位（cm）
 
 ```js
-const height = tide.heightCmAtUTC(new Date());
+import { heightCmAtUTC } from "./tide-lib.js";
+
+const height = heightCmAtUTC(new Date());
 console.log(height); // cm単位の潮位
 ```
 
-##### `seriesCmAtUTC(startDateUtc: Date, minutes: number, stepMinutes?: number): Array`
+### `seriesCmAtUTC(startDateUtc: Date, minutes: number, stepMinutes?: number, params?: object): Array`
 
-指定の期間(UTC)の潮位系列を計算します。戻り値の各要素は `{ tUTC: Date, cm: number }` です。
+指定の期間（UTC）の潮位系列を計算します。
+
+**パラメータ**
+- `startDateUtc`: 開始時刻（UTC instant を表す `Date`）
+- `minutes`: 計算期間（分）
+- `stepMinutes` (optional): サンプリング間隔（分、デフォルト: 10）
+- `params` (optional): 調和定数パラメータ（デフォルト: `ITSUKUSHIMA_PARAMS`）
+
+**戻り値**: `{ tUTC: Date, cm: number }[]` の配列
 
 ```js
-const series = tide.seriesCmAtUTC(new Date(), 24 * 60, 10);
-// 今から24時間、10分刻みで潮位を計算
+import { seriesCmAtUTC } from "./tide-lib.js";
+
+const series = seriesCmAtUTC(new Date(), 24 * 60, 10);
+// 現在から24時間、10分刻みで潮位を計算
 series.forEach(p => {
   console.log(`${p.tUTC.toISOString()}: ${p.cm.toFixed(1)} cm`);
 });
@@ -196,6 +200,7 @@ series.forEach(p => {
 - **節補正係数**: f, u の計算（第2表より）
 
 ※実装上の `τ` は、Doodson/Schureman の **平均太陰時 (mean lunar time)** として扱っています（`τ = T + h − s`）。
+ここで `T` は Greenwich mean solar angle で、UTC 0:00 で 180°、その後 +15°/時 で進みます。
 
 **調和定数（厳島・Itsukushima）**
 

@@ -41,10 +41,10 @@ function astroArgsAtUTMidnight(dateUTC) {
   const midMs = utcMidnightMs(dateUTC);
   const d = daysSinceJ2000_12UTC(midMs);
 
-  // Mean longitudes (deg)
-  const s = 218.3167 + 13.1763965 * d; // Moon
-  const h = 279.974 + 0.985647 * d; // Sun
-  const p = 83.353 + 0.111404 * d; // lunar perigee
+  // Mean longitudes (deg). Rates are in deg/day.
+  const s = 218.3167 + 13.1763965 * d; // Moon (deg/day)
+  const h = 279.974 + 0.985647 * d; // Sun  (deg/day)
+  const p = 83.353 + 0.111404 * d; // lunar perigee (deg/day)
 
   // Node angle N (as written in the reconstructed PDF's simplified form)
   const N = 125.044 - 0.052954 * d;
@@ -57,15 +57,16 @@ function astroArgsAtUTMidnight(dateUTC) {
   };
 }
 
-// UT 0:00 から tHours 進める
+// Advance angles from UT 0:00 by tHours.
 function advanceArgs({ s, h, p, N }, tHours) {
   // Fundamental angles at time t.
   const sNow = mod360(s + 0.54901652 * tHours);
   const hNow = mod360(h + 0.04106864 * tHours);
   const pNow = mod360(p + 0.00464181 * tHours);
 
-  // Mean solar angle at Greenwich (deg), 0° at 0:00 UTC and +15°/hour (mod 360).
-  const T = mod360(15.0 * tHours);
+  // Mean solar angle at Greenwich (deg).
+  // Convention: 180° at 0:00 UTC and +15°/hour (mod 360).
+  const T = mod360(180.0 + 15.0 * tHours);
 
   // Doodson/Schureman-style mean lunar time (τ):
   // τ = T + h − s  (so that dτ/dt ≈ 15 + dh/dt − ds/dt ≈ 14.492°/h)
@@ -76,7 +77,7 @@ function advanceArgs({ s, h, p, N }, tHours) {
     s: sNow,
     h: hNow,
     p: pNow,
-    N, // 日内変化は無視（教科書近似）
+    N, // Daily variation is ignored (textbook approximation).
   };
 }
 
