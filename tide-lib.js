@@ -1,14 +1,14 @@
 // tide-lib.js (ES Module)
-// 教科書(55)(56)式：η(t)=Z0+Σ f_i H_i cos([V_i(t)+u_i]-κ_i)
-// - 公開APIは UTC Date のみ
-// - V_i(t) は天文角の線形結合（ωt を別途足さない）
-// - N は昇交点経度 Ω（減少）
-// - a5*N を含む一般形を実装（現行6分潮は a5=0）
+// PDF: "Harmonic Tide Prediction Model (Reconstructed)"
+// - η(t)=Z0+Σ f_i H_i cos(V_i(t)+u_i-κ_i)
+// - V_i(t)=a1*τ+a2*s+a3*h+a4*p+a5*N (+ a6*p′; this demo ignores p′)
+// - All inputs are UTC instants (Date)
 
 const DEG = Math.PI / 180;
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
+const J2000_12_UTC_MS = Date.UTC(2000, 0, 1, 12, 0, 0, 0);
 
 function mod360(deg) {
   let x = deg % 360;
@@ -28,30 +28,22 @@ function utcMidnightMs(dateUTC) {
   );
 }
 
-function dayOfYearUTC(dateUTC) {
-  const startMs = Date.UTC(dateUTC.getUTCFullYear(), 0, 1);
-  return Math.floor((utcMidnightMs(dateUTC) - startMs) / DAY_MS) + 1;
+function daysSinceJ2000_12UTC(msUtc) {
+  return (msUtc - J2000_12_UTC_MS) / DAY_MS;
 }
 
-// 教科書の補助項 L = floor((Y+3)/4) - 500
-function L_correction(year) {
-  return Math.floor((year + 3) / 4) - 500;
-}
-
-// 教科書(27)-(30): UT 0:00 における天文角
+// PDF 6.x: UT 0:00 における天文角（線形近似）
 function astroArgsAtUTMidnight(dateUTC) {
-  const year = dateUTC.getUTCFullYear();
-  const D = dayOfYearUTC(dateUTC);
-  const L = L_correction(year);
+  const midMs = utcMidnightMs(dateUTC);
+  const d = daysSinceJ2000_12UTC(midMs);
 
-  const y = year - 2000;
-  const d = D + L;
+  // Mean longitudes (deg)
+  const s = 218.3167 + 13.1763965 * d; // Moon
+  const h = 279.974 + 0.985647 * d; // Sun
+  const p = 83.353 + 0.111404 * d; // lunar perigee
 
-  const s = 211.728 + 129.38471 * y + 13.176396 * d;
-  const h = 279.974 - 0.23871 * y + 0.985647 * d;
-  const p = 83.298 + 40.66229 * y + 0.111404 * d;
-  // N = 昇交点経度 Ω（減少）
-  const N = 125.071 - 19.32812 * y - 0.052954 * d;
+  // Node angle N (as written in the reconstructed PDF's simplified form)
+  const N = 125.044 - 0.052954 * d;
 
   return {
     s: mod360(s),
@@ -63,10 +55,12 @@ function astroArgsAtUTMidnight(dateUTC) {
 
 // UT 0:00 から tHours 進める
 function advanceArgs({ s, h, p, N }, tHours) {
-  // 教科書規約：T(0:00UT)=180°
-  const T = mod360(180.0 + 15.0 * tHours);
+  // Mean solar angle at Greenwich (deg), where 0° at 0:00 UTC and +15°/hour.
+  // NOTE: Earlier versions followed a reconstructed PDF that applied a 180° offset.
+  // That offset is arbitrary and must NOT be applied when using published κ values.
+  const tau = mod360(15.0 * tHours);
   return {
-    T,
+    tau,
     s: mod360(s + 0.54901652 * tHours),
     h: mod360(h + 0.04106864 * tHours),
     p: mod360(p + 0.00464181 * tHours),
@@ -85,6 +79,7 @@ function nodalFU(id, Ndeg) {
 
   switch (id) {
     case "O1":
+      // Schureman-style series (degrees)
       return {
         f: 1.0089 + 0.1871 * COSN - 0.0147 * COS2 + 0.0006 * COS3,
         u: -8.86 * SINN + 0.68 * SIN2 - 0.07 * SIN3,
@@ -109,11 +104,14 @@ function nodalFU(id, Ndeg) {
   }
 }
 
-export const ITSUKUSHIMA_PARAMS = Object.freeze({
-  name: "Itsukushima (Miyajima)",
+export const ITSUKUSHIMA_PARAMS_JCG_RAW = Object.freeze({
+  name: "Itsukushima (Miyajima) - JCG harmonic constants (as-is)",
+  // Values transcribed from the Hydrographic Dept. (JCG) sheet (H[cm], κ[deg], Z0[cm]).
+  // IMPORTANT: the sheet does not explicitly state the phase convention / reference meridian.
+  // Keep these as-is for provenance; prefer ITSUKUSHIMA_PARAMS for the demo default.
+  phaseConvention: "sin", // "sin" | "cos"
   Z0_cm: 200.0,
   constituents: Object.freeze([
-    // a = [a1, a2, a3, a4, a5]
     { id: "O1", H_cm: 24.0, kappa_deg: 201.0, a: [1, -2, 1, 0, 0] },
     { id: "P1", H_cm: 10.3, kappa_deg: 219.0, a: [1, 0, -1, 0, 0] },
     { id: "K1", H_cm: 31.0, kappa_deg: 219.0, a: [1, 0, 1, 0, 0] },
@@ -123,11 +121,29 @@ export const ITSUKUSHIMA_PARAMS = Object.freeze({
   ]),
 });
 
+export const ITSUKUSHIMA_PARAMS = Object.freeze({
+  name: "Itsukushima (Miyajima)",
+  // Demo default: cosine-series form (standard in many references).
+  // κ values here are in cosine convention and give close agreement with published daily tide tables.
+  phaseConvention: "cos", // "sin" | "cos"
+  Z0_cm: 200.0,
+  constituents: Object.freeze([
+    // a = [a1, a2, a3, a4, a5] for V = a1*tau + a2*s + a3*h + a4*p + a5*N
+    { id: "O1", H_cm: 24.0, kappa_deg: 160.3, a: [1, -2, 1, 0, 0] },
+    { id: "P1", H_cm: 10.3, kappa_deg: 177.3, a: [1, 0, -1, 0, 0] },
+    { id: "K1", H_cm: 31.0, kappa_deg: 354.0, a: [1, 0, 1, 0, 0] },
+    { id: "M2", H_cm: 103.0, kappa_deg: 11.4, a: [2, -2, 2, 0, 0] },
+    { id: "S2", H_cm: 40.0, kappa_deg: 45.3, a: [2, 0, 0, 0, 0] },
+    { id: "K2", H_cm: 10.9, kappa_deg: 39.2, a: [2, 0, 2, 0, 0] },
+  ]),
+});
+
 function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
   const tHours = (dateUtc.getTime() - dayCtx.midnightMs) / HOUR_MS;
   const args = advanceArgs(dayCtx.base, tHours);
 
   let eta = params.Z0_cm;
+  const phaseConvention = params.phaseConvention ?? "cos";
 
   for (let i = 0; i < params.constituents.length; i++) {
     const c = params.constituents[i];
@@ -135,14 +151,19 @@ function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
     const [a1, a2, a3, a4, a5] = c.a;
 
     const V =
-      a1 * args.T +
+      a1 * args.tau +
       a2 * args.s +
       a3 * args.h +
       a4 * args.p +
       a5 * args.N;
 
-    const phase = mod360(V + u - c.kappa_deg);
-    eta += f * c.H_cm * Math.cos(phase * DEG);
+    const v0 = c.v0_deg ?? 0.0;
+    const phase = mod360(V + v0 + u - c.kappa_deg);
+    if (phaseConvention === "sin") {
+      eta += f * c.H_cm * Math.sin(phase * DEG);
+    } else {
+      eta += f * c.H_cm * Math.cos(phase * DEG);
+    }
   }
   return eta;
 }
