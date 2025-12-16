@@ -9,6 +9,9 @@ const DEG = Math.PI / 180;
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
+
+// J2000 epoch (Jan 1, 2000 12:00 UTC) - standard astronomical reference time
+// Used as the base epoch for all astronomical argument approximations.
 const J2000_12_UTC_MS = Date.UTC(2000, 0, 1, 12, 0, 0, 0);
 
 function mod360(deg) {
@@ -169,6 +172,8 @@ function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
       a4 * args.p +
       a5 * args.N;
 
+    // v0: optional equilibrium argument offset (in degrees); default = 0
+    // phase = V + v0 + u - κ (where u is nodal correction, κ is phase lag)
     const v0 = c.v0_deg ?? 0.0;
     const phase = mod360(V + v0 + u - c.kappa_deg);
     if (phaseConvention === "sin") {
