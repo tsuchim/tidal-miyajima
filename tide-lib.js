@@ -159,6 +159,11 @@ function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
 
   let eta = params.Z0_cm;
   const phaseConvention = params.phaseConvention ?? "cos";
+  
+  // Validate phase convention
+  if (phaseConvention !== "sin" && phaseConvention !== "cos") {
+    throw new Error(`Invalid phaseConvention: "${phaseConvention}". Must be "sin" or "cos".`);
+  }
 
   for (let i = 0; i < params.constituents.length; i++) {
     const c = params.constituents[i];
