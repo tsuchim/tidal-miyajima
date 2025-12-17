@@ -117,7 +117,7 @@ function nodalFU(id, Ndeg) {
 function seasonalMeanAnomalyCm(dateUtc, model) {
   if (!model) return 0.0;
   if (model.type !== "annual+semiannual") return 0.0;
-  const tzOffsetMinutes = model.tzOffsetMinutes ?? 540; // JST default for Japan stations
+  const JST_OFFSET_MINUTES = 540; // Japan Standard Time (UTC+9)
   const d = doyFractionInTz(dateUtc, tzOffsetMinutes);
   const w = (2 * Math.PI) / 365.2422;
   const phi1 = (model.annual?.phase_deg ?? 0) * DEG;
