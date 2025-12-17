@@ -24,6 +24,14 @@ function mod360(deg) {
 function cosd(d) { return Math.cos(d * DEG); }
 function sind(d) { return Math.sin(d * DEG); }
 
+function doyFractionInTz(dateUtc, tzOffsetMinutes) {
+  const offsetMs = (tzOffsetMinutes ?? 0) * MINUTE_MS;
+  const localMs = dateUtc.getTime() + offsetMs;
+  const local = new Date(localMs);
+  const jan1LocalMs = Date.UTC(local.getUTCFullYear(), 0, 1, 0, 0, 0, 0);
+  return (localMs - jan1LocalMs) / DAY_MS;
+}
+
 function utcMidnightMs(dateUTC) {
   return Date.UTC(
     dateUTC.getUTCFullYear(),
@@ -106,6 +114,19 @@ function nodalFU(id, Ndeg) {
   }
 }
 
+function seasonalMeanAnomalyCm(dateUtc, model) {
+  if (!model) return 0.0;
+  if (model.type !== "annual+semiannual") return 0.0;
+  const tzOffsetMinutes = model.tzOffsetMinutes ?? 540; // JST default for Japan stations
+  const d = doyFractionInTz(dateUtc, tzOffsetMinutes);
+  const w = (2 * Math.PI) / 365.2422;
+  const phi1 = (model.annual?.phase_deg ?? 0) * DEG;
+  const phi2 = (model.semiannual?.phase_deg ?? 0) * DEG;
+  const a1 = model.annual?.amp_cm ?? 0;
+  const a2 = model.semiannual?.amp_cm ?? 0;
+  return a1 * Math.cos(w * d - phi1) + a2 * Math.cos(2 * w * d - phi2);
+}
+
 export const ITSUKUSHIMA_PARAMS = Object.freeze({
   name: "Itsukushima (Miyajima) - JCG harmonic constants",
   // Values transcribed from the Hydrographic Dept. (JCG) sheet (H[cm], κ[deg], Z0[cm]).
@@ -116,6 +137,17 @@ export const ITSUKUSHIMA_PARAMS = Object.freeze({
   // Interpretation knob: when κ is referenced to the station meridian (not Greenwich), shift T by longitude (east+).
   // The sheet header lists 132°19′E.
   referenceLongitude_deg: 132 + 19 / 60,
+  // Mean sea level seasonal variation:
+  // JCG's public predictor notes: "Includes the seasonal change of mean sea level."
+  // The parameter sheet does not provide a seasonal term, so we use Hiroshima (area=3419) as a proxy and
+  // fit an annual+semiannual anomaly model from JCG's published hourly predictions for year 2025.
+  // This is an additive anomaly with ~0 yearly mean (cm) in local time (JST).
+  seasonalMeanModel: Object.freeze({
+    type: "annual+semiannual",
+    tzOffsetMinutes: 540,
+    annual: Object.freeze({ amp_cm: 16.60, phase_deg: -131.93 }),
+    semiannual: Object.freeze({ amp_cm: 2.02, phase_deg: -170.64 }),
+  }),
   Z0_cm: 200.0,
   constituents: Object.freeze([
     // a = [a1, a2, a3, a4, a5] for V = a1*T + a2*s + a3*h + a4*p + a5*N
@@ -134,7 +166,7 @@ function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
   const args = advanceArgs(dayCtx.base, tHours);
   const T = mod360(args.T + (params.referenceLongitude_deg ?? 0.0));
 
-  let eta = params.Z0_cm;
+  let eta = params.Z0_cm + seasonalMeanAnomalyCm(dateUtc, params.seasonalMeanModel);
   const phaseConvention = params.phaseConvention ?? "cos";
   
   // Validate phase convention
