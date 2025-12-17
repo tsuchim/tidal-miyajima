@@ -60,7 +60,11 @@ function astroArgsAtUTMidnight(dateUTC) {
 // Advance angles from UT 0:00 by tHours.
 function advanceArgs({ s, h, p, N }, tHours) {
   // docs/HarmonicTidePredictionModel.md 3.3
-  const T = mod360(180.0 + 15.0 * tHours);
+  // T: base angle advancing at 15°/hour.
+  // Some harmonic-constant tables define the epoch κ relative to a local reference meridian.
+  // To support that as an interpretation issue (not a fitted constant), we optionally shift T by longitude.
+  const T0 = 180.0;
+  const T = mod360(T0 + 15.0 * tHours);
   const sNow = mod360(s + 0.5490165 * tHours);
   const hNow = mod360(h + 0.0410687 * tHours);
   const pNow = mod360(p + 0.0046418 * tHours);
@@ -109,6 +113,9 @@ export const ITSUKUSHIMA_PARAMS = Object.freeze({
   //
   // NOTE: This parameter sheet does not explicitly state the phase convention / reference meridian.
   phaseConvention: "cos", // "sin" | "cos"
+  // Interpretation knob: when κ is referenced to the station meridian (not Greenwich), shift T by longitude (east+).
+  // The sheet header lists 132°19′E.
+  referenceLongitude_deg: 132 + 19 / 60,
   Z0_cm: 200.0,
   constituents: Object.freeze([
     // a = [a1, a2, a3, a4, a5] for V = a1*T + a2*s + a3*h + a4*p + a5*N
@@ -125,6 +132,7 @@ export const ITSUKUSHIMA_PARAMS = Object.freeze({
 function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
   const tHours = (dateUtc.getTime() - dayCtx.midnightMs) / HOUR_MS;
   const args = advanceArgs(dayCtx.base, tHours);
+  const T = mod360(args.T + (params.referenceLongitude_deg ?? 0.0));
 
   let eta = params.Z0_cm;
   const phaseConvention = params.phaseConvention ?? "cos";
@@ -140,7 +148,7 @@ function heightCmAtUTCWithDayCtx(dateUtc, params, dayCtx) {
     const [a1, a2, a3, a4, a5] = c.a;
 
     const V =
-      a1 * args.T +
+      a1 * T +
       a2 * args.s +
       a3 * args.h +
       a4 * args.p +
